@@ -1,5 +1,6 @@
 %% Set up.
 clear all; close all; clc; rng default;
+addpath('sfm');
 
 % How many images to use when determining colors.
 COLOR_SUBSET_SIZE = 5;
@@ -13,6 +14,7 @@ TRACK_WIDTH_SUBSET_SIZE = 30;
 % Which images to use?
 image_folder = 'N_uV0Q2UH98';
 image_range = [91 6119];
+image_range = [3000 3100];
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
@@ -33,15 +35,44 @@ subset_images = random_subset_images(image_paths, TRACK_COLOR_SUBSET_SIZE);
 subset_images = random_subset_images(image_paths, TRACK_WIDTH_SUBSET_SIZE);
 track_width_pixels = average_track_width(subset_images, track_color_centroid_idx, color_centroids)
 
-%% Specialized SFM based on angle of track.
-width = 1;
-camera_center = [0 0 0];
-camera_centers = zeros(numel(image_paths)+1, 3);
+%% We're going to use track_width_pixels as scale factor, because we arbitrarily declare the real track width 1
+K = eye(3); K(1,1) = track_width_pixels; K(2,2) = track_width_pixels;
+
+%% Solve for [R t] matrices between frames.
+% Initialize features in last image, which should be similar to the first
+% image because roller coasters are a loop.
+image2 = rgb2gray(imread(image_paths{end}));
+points = detectSURFFeatures(image2);
+[features2,valid_points2] = extractFeatures(image2,points);
+cumulative_Rt = [eye(3), zeros(3,1)];
+track_points = zeros(numel(image_paths), 3);
 for i=1:numel(image_paths)
-  image = imread(image_paths{i});
-  [width camera_center] = next_center(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels);
-  widths(i+1,:) = width;
-  camera_centers(i+1,:) = camera_center;
+  % Replace image1 with image2, then get a new image2.
+  image1 = image2;
+  image2 = rgb2gray(imread(image_paths{i}));
+  [H W] = size(image2);
+  features1 = features2;
+  valid_points1 = valid_points2;
+
+  % Detect features.
+  points = detectSURFFeatures(image2);
+  [features2,valid_points2] = extractFeatures(image2,points);
+  
+  % Find correspondences.
+  index_pairs = matchFeatures(features1, features2);
+  matchedPoints1 = valid_points1(index_pairs(:,1),:);
+  matchedPoints2 = valid_points2(index_pairs(:,2),:);
+
+  % Estimate the fundamental matrix F.
+  F = estimateFundamentalMatrix(matchedPoints1,matchedPoints2,'Method','RANSAC','NumTrials',2000,'DistanceThreshold',1e-4);
+  E = K' * F * K;
+
+  % Solve SFM.
+  Rt = computeRTFromE(E, [matchedPoints1.Location'; matchedPoints2.Location'], K, H, W);  
+  R = Rt(:,1:3);
+  t = Rt(:,4);
+  cumulative_Rt = [cumulative_Rt(:,1:3) * R, cumulative_Rt(:,4) + t];
+  track_points(i,:) = cumulative_Rt * [0;0;0;1];
 end
 figure();
 plot3(camera_centers(:,1), camera_centers(:,2), camera_centers(:,3), '.');
