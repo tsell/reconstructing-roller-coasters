@@ -14,7 +14,6 @@ TRACK_WIDTH_SUBSET_SIZE = 30;
 % Which images to use?
 image_folder = 'N_uV0Q2UH98';
 image_range = [91 6119];
-image_range = [3000 3100];
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
@@ -39,13 +38,20 @@ track_width_pixels = average_track_width(subset_images, track_color_centroid_idx
 K = eye(3); K(1,1) = track_width_pixels; K(2,2) = track_width_pixels;
 
 %% Solve for [R t] matrices between frames.
+
+% TESTING ONLY: use a small set of frames.
+image_range = [3000 3010]
+image_paths = cell(diff(image_range), 1);
+for i=image_range(1):image_range(2)
+  image_paths{i - image_range(1) + 1} = sprintf('%s/%05d.png', image_folder, i);
+end
+
 % Initialize features in last image, which should be similar to the first
 % image because roller coasters are a loop.
 image2 = rgb2gray(imread(image_paths{end}));
 points = detectSURFFeatures(image2);
 [features2,valid_points2] = extractFeatures(image2,points);
-cumulative_Rt = [eye(3), zeros(3,1)];
-track_points = zeros(numel(image_paths), 3);
+track_points = zeros(numel(image_paths) + 1, 3);
 for i=1:numel(image_paths)
   % Replace image1 with image2, then get a new image2.
   image1 = image2;
@@ -68,11 +74,9 @@ for i=1:numel(image_paths)
   E = K' * F * K;
 
   % Solve SFM.
-  Rt = computeRTFromE(E, [matchedPoints1.Location'; matchedPoints2.Location'], K, H, W);  
-  R = Rt(:,1:3);
-  t = Rt(:,4);
-  cumulative_Rt = [cumulative_Rt(:,1:3) * R, cumulative_Rt(:,4) + t];
-  track_points(i,:) = cumulative_Rt * [0;0;0;1];
+  Rt = computeRTFromE(E, [matchedPoints1.Location'; matchedPoints2.Location'], K, H, W);
+
+  track_points(i+1,:) = Rt * [track_points(i,:)'; 1];
 end
 figure();
-plot3(camera_centers(:,1), camera_centers(:,2), camera_centers(:,3), '.');
+plot3(track_points(:,1), track_points(:,2), track_points(:,3), '.');
