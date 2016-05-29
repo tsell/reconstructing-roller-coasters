@@ -1,4 +1,4 @@
-function [ track_color_centroid ] = track_color(images, color_centroids)
+function [ track_color_centroid, track_color_centroid_idx ] = track_color(images, color_centroids)
 
 % How wide of a strip (in pixels) at the bottom to use for track-color determination.
 BOTTOM_STRIP_WIDTH = 10;
@@ -39,10 +39,10 @@ for i=1:numel(images)
     edblock_pixel_list = reshape(edblock, H*blockwidth, 1);
 
     % Do the masking to get a list of pixels that are halfedges.
-    block_pixel_list = imblock_pixel_list(find(edblock_pixel_list), :);
+    block_edge_pixel_list = imblock_pixel_list(find(edblock_pixel_list), :);
 
     % Figure out which color each halfedge pixel is closest to.
-    colors = knnsearch(color_centroids, double(block_pixel_list));
+    colors = knnsearch(color_centroids, double(block_edge_pixel_list));
 
     % Update histogram for this block.
     [h, e] = histcounts(colors, num_colors);
@@ -58,7 +58,7 @@ end
 halfedge_histogram
 
 % The track is in the middle, so we find the color which (almost-)only appears in the middle.
-threshold = min(halfedge_histogram(1,:) + halfedge_histogram(end,:)) + 1
-track_color_idx = find((halfedge_histogram(1,:) + halfedge_histogram(end,:)) < threshold);
-track_color_centroid = mean(color_centroids(track_color_idx, :), 1);
+[t, track_color_centroid_idx] = min(halfedge_histogram(1,:) + halfedge_histogram(end,:));
+track_color_centroid = color_centroids(track_color_centroid_idx, :);
+end
 
