@@ -1,9 +1,9 @@
-function [ new_camera_center, track_angle ] = next_center_and_angle(camera_center, image, track_color_centroid_idx, color_centroids)
+function [ new_camera_center, track_angle ] = next_center_and_angle(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels)
 
 % How tall each stripe should be.
-STRIPE_WIDTH = 20;
+STRIPE_HEIGHT = 20;
 % How many stripes to use to calculate the track angle.
-STRIPE_COUNT = 3;
+STRIPE_COUNT = 2;
 
 [H W C] = size(image);
 image = imgaussfilt(image, 4);
@@ -15,9 +15,10 @@ widths = zeros(STRIPE_COUNT, 1);
 centers = zeros(STRIPE_COUNT, 1);
 
 % Start at the bottom.
-stripe_start = H-STRIPE_WIDTH;
+stripe_start = H-STRIPE_HEIGHT;
 for s=1:STRIPE_COUNT
-  stripe = image(stripe_start:stripe_start+STRIPE_WIDTH,:,:);
+  stripe = image(stripe_start:stripe_start+STRIPE_HEIGHT,:,:);
+  stripe_start = stripe_start-STRIPE_HEIGHT-1;
   [Hs Ws Cs] = size(stripe);
 
   % As a list of pixels (one 3-column RGB per row).
@@ -29,9 +30,9 @@ for s=1:STRIPE_COUNT
 
   % Get the leftmost and rightmost track-colored pixel in each row.
   track_pixels_indices = colors==track_color_centroid_idx;
-  lefts = zeros(STRIPE_WIDTH,1);
-  rights = zeros(STRIPE_WIDTH,1);
-  for r=1:STRIPE_WIDTH
+  lefts = zeros(STRIPE_HEIGHT,1);
+  rights = zeros(STRIPE_HEIGHT,1);
+  for r=1:STRIPE_HEIGHT
     if any(track_pixels_indices(r,:))
       f = find(track_pixels_indices(r,:));
       lefts(r) = min(f);
@@ -40,7 +41,20 @@ for s=1:STRIPE_COUNT
   end
   if max(rights) ~= 0
     width(s) = max(rights) - min(lefts);
-    center(s) = mean([rights,lefts])
+    center(s) = mean([rights;lefts]);
+  else
+    track_angle = [0 0 0];
+    new_camera_center = camera_center;
+    return
   end
-
 end
+
+% TODO: fix
+forward_translate = acos(width(2)/width(1));
+horiz_translate = center(2) - center(1);
+vert_translate = track_width_pixels;
+
+t = [forward_translate, horiz_translate, vert_translate];
+new_camera_center = camera_center + t;
+track_angle = [forward_translate, atan2(width(1), atan2(STRIPE_COUNT*STRIPE_HEIGHT, center(2) - center(1))), 0];
+width = width(1) / track_width_pixels;

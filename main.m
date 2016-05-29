@@ -35,15 +35,17 @@ subset_images = random_subset_images(image_paths, TRACK_WIDTH_SUBSET_SIZE);
 track_width_pixels = average_track_width(subset_images, track_color_centroid_idx, color_centroids)
 
 %% Specialized SFM based on angle of track.
+width = 1;
 camera_center = [0 0 0];
-track_angle = [0 0 0];
+track_norm = [0 0 0];
 camera_centers = zeros(numel(image_paths)+1, 3);
-track_angles = zeros(numel(image_paths)+1, 3);
+track_norms = zeros(numel(image_paths)+1, 3);
 for i=1:numel(image_paths)
   image = imread(image_paths{i});
-  [camera_center track_angle] = next_center_and_angle(camera_center, image, track_color_centroid_idx, color_centroids);
+  [width camera_center track_angle] = next_center_and_angle(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels);
+  widths(i+1,:) = width;
   camera_centers(i+1,:) = camera_center;
-  track_angles(i+1,:) = track_angle;
+  track_norms(i+1,:) = track_norm;
 end
 figure();
-quiver3(camera_centers(:,1), camera_centers(:,2), camera_centers(:,3), track_angles(:,1), track_angles(:,2), track_angles(:,3))
+plot3(camera_centers(:,1), camera_centers(:,2), camera_centers(:,3), '.');
