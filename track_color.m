@@ -57,6 +57,9 @@ end
 
 halfedge_histogram
 
-% Find the peak in the histogram.
-[maxval maxidx] = max(halfedge_histogram(:));
-[maxblock maxcolor] = ind2sub(size(halfedge_histogram), maxidx)
+% Find the color with the most zeroes in its column.
+% This will be the track color, because the track ONLY appears in the center group of
+% sections. All other colors should appear at least once somewhere.
+[m track_color_idx] = max(sum(halfedge_histogram==0, 1));
+track_color_centroid = color_centroids(track_color_idx, :);
+

@@ -38,4 +38,4 @@ for i=1:TRACK_COLOR_SUBSET_SIZE
   subset_images{i} = imread(subset_paths{i});
 end
 
-halfedge_histogram = track_color(subset_images, color_centroids)
+track_color_centroid = track_color(subset_images, color_centroids)
