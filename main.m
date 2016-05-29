@@ -3,8 +3,6 @@ clear all; close all; clc; rng default;
 
 % How many images to use when determining colors.
 COLOR_SUBSET_SIZE = 5;
-% How many colors to distinguish (we want the track to be all one color).
-NUM_COLORS = 10;
 
 % How many images to use when determing track color.
 TRACK_COLOR_SUBSET_SIZE = 100;
@@ -28,7 +26,7 @@ for i=1:COLOR_SUBSET_SIZE
 end
 
 % Use k-means to determine the centroids of our colors.
-color_centroids = cluster_colors(subset_images, NUM_COLORS)
+color_centroids = cluster_colors(subset_images)
 
 %% Find track color.
 % Select a random subset of images.
@@ -39,3 +37,5 @@ for i=1:TRACK_COLOR_SUBSET_SIZE
 end
 
 track_color_centroid = track_color(subset_images, color_centroids)
+
+%% Do SFM.

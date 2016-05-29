@@ -1,16 +1,15 @@
-function [ color_centroids ] = cluster_colors( images, num_colors )
+function [ color_centroids ] = cluster_colors( images )
 % Use k-means to determine the centroids of our colors.
 %   Input:
 %     images = a cell array of RGB images.
-%     num_colors = number of clusters to use in k-means
 %
 %   Returns:
-%     color_centroids = a num_colors x 3 matrix of RGB values.
+%     color_centroids = a NUM_COLORS x 3 matrix of RGB values.
 
-sprintf('cluster_colors: Images is of size %d \n', numel(images));
-sprintf('cluster_colors: Number of colors: %d', num_colors);
-
-SUBSET_SIZE = 100 * num_colors;
+% How many colors to distinguish (we want the track to be all one color).
+NUM_COLORS = 10;
+% How many pixels to sample per image.
+SUBSET_SIZE = 100 * NUM_COLORS;
 
 % Pick a random sample of pixels from the images.
 % pixels will become a SUBSET_SIZE*numel(images) x 3 array, with one column each for R, G, B.
@@ -23,5 +22,5 @@ for i=1:numel(images)
 end
 
 % Run k-means on the random sample.
-[idx, color_centroids] = kmeans(double(pixels), num_colors);
+[idx, color_centroids] = kmeans(double(pixels), NUM_COLORS);
 end

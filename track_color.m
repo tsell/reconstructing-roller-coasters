@@ -3,7 +3,7 @@ function [ track_color_centroid ] = track_color(images, color_centroids)
 % How wide of a strip (in pixels) at the bottom to use for track-color determination.
 BOTTOM_STRIP_WIDTH = 10;
 % How many segments to break the bottom strip into for track-color determination.
-BOTTOM_STRIP_SEGMENTS = 12;
+BOTTOM_STRIP_SEGMENTS = 5;
 
 [num_colors x] = size(color_centroids);
 
@@ -57,9 +57,8 @@ end
 
 halfedge_histogram
 
-% Find the color with the most zeroes in its column.
-% This will be the track color, because the track ONLY appears in the center group of
-% sections. All other colors should appear at least once somewhere.
-[m track_color_idx] = max(sum(halfedge_histogram==0, 1));
-track_color_centroid = color_centroids(track_color_idx, :);
+% The track is in the middle, so we find the color which (almost-)only appears in the middle.
+threshold = min(halfedge_histogram(1,:) + halfedge_histogram(end,:)) + 1
+track_color_idx = find((halfedge_histogram(1,:) + halfedge_histogram(end,:)) < threshold);
+track_color_centroid = mean(color_centroids(track_color_idx, :), 1);
 
