@@ -1,4 +1,4 @@
-function [ new_camera_center, track_angle ] = next_center_and_angle(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels)
+function [ track_width, new_camera_center ] = next_center(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels)
 
 % How tall each stripe should be.
 STRIPE_HEIGHT = 20;
@@ -40,21 +40,20 @@ for s=1:STRIPE_COUNT
     end
   end
   if max(rights) ~= 0
-    width(s) = max(rights) - min(lefts);
-    center(s) = mean([rights;lefts]);
+    widths(s) = max(rights) - min(lefts);
+    centers(s) = mean([rights;lefts]);
   else
-    track_angle = [0 0 0];
+    track_width = 0;
     new_camera_center = camera_center;
     return
   end
 end
 
 % TODO: fix
-forward_translate = acos(width(2)/width(1));
-horiz_translate = center(2) - center(1);
-vert_translate = track_width_pixels;
+forward_translate = acos(widths(2)/widths(1));
+horiz_translate = (centers(2) - centers(1)) / track_width_pixels;
+vert_translate = track_width_pixels/widths(1) - 1;
 
 t = [forward_translate, horiz_translate, vert_translate];
 new_camera_center = camera_center + t;
-track_angle = [forward_translate, atan2(width(1), atan2(STRIPE_COUNT*STRIPE_HEIGHT, center(2) - center(1))), 0];
-width = width(1) / track_width_pixels;
+track_width = widths(1) / track_width_pixels;

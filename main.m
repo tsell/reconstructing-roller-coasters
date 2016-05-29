@@ -13,7 +13,6 @@ TRACK_WIDTH_SUBSET_SIZE = 30;
 % Which images to use?
 image_folder = 'N_uV0Q2UH98';
 image_range = [91 6119];
-image_range = [3000 3100];
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
@@ -37,15 +36,12 @@ track_width_pixels = average_track_width(subset_images, track_color_centroid_idx
 %% Specialized SFM based on angle of track.
 width = 1;
 camera_center = [0 0 0];
-track_norm = [0 0 0];
 camera_centers = zeros(numel(image_paths)+1, 3);
-track_norms = zeros(numel(image_paths)+1, 3);
 for i=1:numel(image_paths)
   image = imread(image_paths{i});
-  [width camera_center track_angle] = next_center_and_angle(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels);
+  [width camera_center] = next_center(camera_center, image, track_color_centroid_idx, color_centroids, track_width_pixels);
   widths(i+1,:) = width;
   camera_centers(i+1,:) = camera_center;
-  track_norms(i+1,:) = track_norm;
 end
 figure();
 plot3(camera_centers(:,1), camera_centers(:,2), camera_centers(:,3), '.');
