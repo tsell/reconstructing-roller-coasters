@@ -63,7 +63,7 @@ for i=1:EXAMPLE_IMAGES
   imshow(cim, [0 0 0; track_color_centroid / 255]);
 end
 
-%% Find track width (should be either ~870 or ~280 pixels for the orange track).
+%% Find track width (should be ~500-1000 pixels for the orange track, not very precise).
 subset_images = random_subset_images(image_paths, TRACK_WIDTH_SUBSET_SIZE);
 track_width_pixels = average_track_width(subset_images, track_color_centroid_idx, color_centroids)
 
