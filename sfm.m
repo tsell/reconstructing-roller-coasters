@@ -1,4 +1,4 @@
-function [ track_points ] = sfm( image_paths, color_centroids, track_color_centroid_idx)
+function [ track_points ] = sfm( image_paths, track_color_centroid_idx, color_centroids, cameraParams, save_images)
 % Initialize with the first frame.
 colorimage = imread(image_paths{1});
 % Manual tweaking: crop out the six flags logo.
@@ -26,16 +26,15 @@ disp('Begin SFM loop')
 for i=2:numel(image_paths)
   % Figure out the image's colors.
   colorimage = imread(image_paths{i});
-  % Manual tweaking: crop out the six flags logo.
   colorimage = colorimage(:,1:1600,:);
   [H W C] = size(colorimage);
   pixel_list = reshape(colorimage, H*W, C);
 
   % Replace image1 with image2, then get a new image2.
   image1 = image2;
-  image2 = rgb2gray(colorimage);
   features1 = features2;
   valid_points1 = valid_points2;
+  image2 = rgb2gray(colorimage);
 
   % Detect features.
   points = detectSURFFeatures(image2);
@@ -52,6 +51,14 @@ for i=2:numel(image_paths)
   % Solve SFM between our two frames.
   inliers1 = matchedPoints1(epipolarInliers,:);
   inliers2 = matchedPoints2(epipolarInliers,:);
+  
+  if save_images
+    figure
+    showMatchedFeatures(image1, image2, inliers1, inliers2);
+    impath = sprintf('features_%05d.png', i);
+    saveas(gcf,impath);
+  end
+
   [R, t] = cameraPose(F, cameraParams, inliers1, inliers2);
 
   % Rotations and translations are cumulative (only frame 1 should be at the origin).
