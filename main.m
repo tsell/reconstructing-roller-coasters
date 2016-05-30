@@ -74,11 +74,28 @@ K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
 cameraParams = cameraParameters('IntrinsicMatrix', K);
 
 %% Solve SFM.
+
+%% TESTING ONLY: Use a small set of frames.
+image_range = [91 200];
+image_paths = cell(diff(image_range), 1);
+for i=image_range(1):image_range(2)
+  image_paths{i - image_range(1) + 1} = sprintf('%s/%05d.png', image_folder, i);
+end
+
 % Initialize with the first frame.
 colorimage = imread(image_paths{1});
+% Manual tweaking: crop out the six flags logo.
+colorimage = colorimage(:,1:1600,:);
 image2 = rgb2gray(colorimage);
 points = detectSURFFeatures(image2);
 [features2,valid_points2] = extractFeatures(image2,points);
+
+% Show off our features.
+figure
+imshow(image2);
+hold on
+plot(points.selectStrongest(1000));
+saveas(gcf,'features.png');
 
 % Collect track points.
 track_points = [];
@@ -87,10 +104,14 @@ track_point_colors = [];
 % Rotation and translation are cumulative, remember.
 cR = eye(3);
 cT = [0,0,0];
+camMatrix2 = cameraMatrix(cameraParams, cR, -cT*cR');
 
+disp('Begin SFM loop')
 for i=2:numel(image_paths)
   % Figure out the image's colors.
   colorimage = imread(image_paths{i});
+  % Manual tweaking: crop out the six flags logo.
+  colorimage = colorimage(:,1:1600,:);
   [H W C] = size(colorimage);
   pixel_list = reshape(colorimage, H*W, C);
 
@@ -110,7 +131,7 @@ for i=2:numel(image_paths)
   matchedPoints2 = valid_points2(index_pairs(:,2),:);
 
   % Estimate the fundamental matrix F.
-  [F, epipolarInliers] = estimateFundamentalMatrix(matchedPoints1,matchedPoints2,'Method','MSAC','NumTrials',2000);
+  [F, epipolarInliers] = estimateFundamentalMatrix(matchedPoints1,matchedPoints2,'Method','RANSAC','NumTrials',2000);
 
   % Solve SFM between our two frames.
   inliers1 = matchedPoints1(epipolarInliers,:);
@@ -118,9 +139,9 @@ for i=2:numel(image_paths)
   [R, t] = cameraPose(F, cameraParams, inliers1, inliers2);
 
   % Rotations and translations are cumulative (only frame 1 should be at the origin).
-  camMatrix1 = cameraMatrix(cameraParams, cR', -cT*cR');
+  camMatrix1 = camMatrix2;
   cR = R * cR;
-  cT = cT * R' + t;
+  cT = t + cT;
   camMatrix2 = cameraMatrix(cameraParams, cR', -cT*cR');
 
   % Compute the 3-D points.
@@ -140,15 +161,21 @@ for i=2:numel(image_paths)
   else
     track_points = pcmerge(track_points, pc, 10);
   end
+
+  % We don't need a million warnings about singular matrices.
+  [a, MSGID] = lastwarn(); warning('off', MSGID)
 end
+disp('Done computation, rendering figures...')
 
 %% Display Figure
+hold off;
 figure;
 axis tight auto;
 pcshow(track_points);
+saveas(gcf,'points.png');
 v = VideoWriter('rotate_points.avi');
 open(v);
-for k = 45:405
+for k = 45:135
   view(k, 45);
   writeVideo(v,getframe(gcf));
 end
