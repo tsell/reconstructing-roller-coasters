@@ -40,11 +40,11 @@ track_width_pixels = average_track_width(subset_images, track_color_centroid_idx
 K = eye(3); K(3,3) = track_width_pixels;
 cameraParams = cameraParameters('IntrinsicMatrix', K);
 
-%% Solve for [R t] matrices between frames.
+%% Solve SFM.
 
 % TESTING ONLY: use a small set of frames.
 image_range = [91 6119];
-image_range = [91 100]
+image_range = [91 110]
 image_paths = cell(diff(image_range), 1);
 for i=image_range(1):image_range(2)
   image_paths{i - image_range(1) + 1} = sprintf('%s/%05d.png', image_folder, i);
@@ -57,6 +57,7 @@ points = detectSURFFeatures(image2);
 
 % Collect track points.
 track_points = [];
+track_point_colors = [];
 
 % Rotation and translation are cumulative, remember.
 cR = eye(3);
@@ -86,10 +87,12 @@ for i=2:numel(image_paths)
   % Estimate the fundamental matrix F.
   [F, epipolarInliers] = estimateFundamentalMatrix(matchedPoints1,matchedPoints2,'Method','MSAC','NumTrials',2000);
 
-  % Solve SFM.
+  % Solve SFM between our two frames.
   inliers1 = matchedPoints1(epipolarInliers,:);
   inliers2 = matchedPoints2(epipolarInliers,:);
   [R, t] = cameraPose(F, cameraParams, inliers1, inliers2);
+
+  % Rotations and translations are cumulative (only frame 1 should be at the origin).
   camMatrix1 = cameraMatrix(cameraParams, cR', -cT*cR');
   cR = R * cR;
   cT = cT * R' + t;
@@ -106,9 +109,9 @@ for i=2:numel(image_paths)
   point_color_centroids = knnsearch(color_centroids, double(pointColors));
   track_point_idxs = find(point_color_centroids == track_color_centroid_idx);
   if isempty(track_points)
-    track_points = select(pointCloud(points3D), track_point_idxs);
+    track_points = select(pointCloud(points3D, 'Color', pointColors), track_point_idxs);
   else
-    track_points = pcmerge(track_points, select(pointCloud(points3D), track_point_idxs), 1);
+    track_points = pcmerge(track_points, select(pointCloud(points3D, 'Color', pointColors), track_point_idxs), 1);
   end
 end
 
@@ -118,7 +121,7 @@ axis tight auto;
 pcshow(track_points);
 v = VideoWriter('rotate_points.avi');
 open(v);
-for k = 1:180
+for k = 45:405
   view(k, 45);
   writeVideo(v,getframe(gcf));
 end
