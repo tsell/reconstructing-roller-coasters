@@ -108,3 +108,4 @@ for k = 45:135
   writeVideo(v,getframe(gcf));
 end
 close(v);
+exit;
