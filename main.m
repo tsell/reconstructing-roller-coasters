@@ -5,13 +5,16 @@ clear all; close all; clc; rng default;
 COLOR_SUBSET_SIZE = 5;
 
 % How many images to use when determing track color.
-TRACK_COLOR_SUBSET_SIZE = 20;
+TRACK_COLOR_SUBSET_SIZE = 50;
 
 % How many images to use when determining track width.
-TRACK_WIDTH_SUBSET_SIZE = 30;
+TRACK_WIDTH_SUBSET_SIZE = 50;
 
 % Maximum distance from plane when fitting track planes.
 PLANE_FIT_THRESHOLD = 20;
+
+% How many example images to display.
+EXAMPLE_IMAGES = 1;
 
 % Which images to use?
 image_folder = 'N_uV0Q2UH98';
@@ -29,9 +32,10 @@ subset_images = random_subset_images(image_paths, COLOR_SUBSET_SIZE);
 color_centroids = cluster_colors(subset_images)
 
 % Output image of centroid-alized pixels.
-for i=1:10
-  rand_num = randi(numel(image_paths)); 
-  impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1)
+example_image_nums = randi(numel(image_paths), 1, EXAMPLE_IMAGES);
+for i=1:EXAMPLE_IMAGES
+  rand_num = example_image_nums(i);
+  impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1);
   im = imread(image_paths{rand_num});
   [H W C] = size(im);
   pixel_list = reshape(im, H*W, C);
@@ -46,10 +50,9 @@ subset_images = random_subset_images(image_paths, TRACK_COLOR_SUBSET_SIZE);
 [track_color_centroid, track_color_centroid_idx] = track_color(subset_images, color_centroids)
 
 % Output image of just track-colored pixels.
-for i=1:10
-  rand_num = randi(numel(image_paths)); 
-  impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1)
-  impath = sprintf('just_the_track_%05d.png', rand_num+image_range(1)-1)
+for i=1:EXAMPLE_IMAGES
+  rand_num = example_image_nums(i);
+  impath = sprintf('just_the_track_%05d.png', rand_num+image_range(1)-1);
   im = imread(image_paths{rand_num});
   [H W C] = size(im);
   pixel_list = reshape(im, H*W, C);
@@ -71,14 +74,7 @@ K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
 cameraParams = cameraParameters('IntrinsicMatrix', K);
 
 %% Solve SFM.
-
-% TESTING ONLY: use a small set of frames.
-image_range = [91 6119];
-image_paths = cell(diff(image_range), 1);
-for i=image_range(1):image_range(2)
-  image_paths{i - image_range(1) + 1} = sprintf('%s/%05d.png', image_folder, i);
-end
-
+% Initialize with the first frame.
 colorimage = imread(image_paths{1});
 image2 = rgb2gray(colorimage);
 points = detectSURFFeatures(image2);
