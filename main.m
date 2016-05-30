@@ -76,7 +76,7 @@ cameraParams = cameraParameters('IntrinsicMatrix', K);
 %% Solve SFM.
 
 %% TESTING ONLY: Use a small set of frames.
-image_range = [91 200];
+image_range = [91 6119];
 image_paths = cell(diff(image_range), 1);
 for i=image_range(1):image_range(2)
   image_paths{i - image_range(1) + 1} = sprintf('%s/%05d.png', image_folder, i);
@@ -99,7 +99,6 @@ saveas(gcf,'features.png');
 
 % Collect track points.
 track_points = [];
-track_point_colors = [];
 
 % Rotation and translation are cumulative, remember.
 cR = eye(3);
