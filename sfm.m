@@ -1,91 +1,101 @@
 function [ track_points ] = sfm( image_paths, track_color_centroid_idx, color_centroids, cameraParams, save_images)
+
+%% SFM Step One
+% Find the camera poses for each frame.
+disp('First SFM step.')
 % Initialize with the first frame.
-colorimage = imread(image_paths{1});
-% Manual tweaking: crop out the six flags logo.
-colorimage = colorimage(:,1:1600,:);
-image2 = rgb2gray(colorimage);
-points = detectSURFFeatures(image2);
-[features2,valid_points2] = extractFeatures(image2,points);
+I = undistortImage(rgb2gray(imread(image_paths{1})), cameraParams);
+prevI = I;
+
+% Crop the images to remove logos and edge distortions.
+border = 100;
+roi = [border, border,...
+       size(I, 2) - 2*border, size(I, 1) - 2*border];
+prev_points = detectSURFFeatures(I, 'NumOctaves', 8, 'ROI', roi);
 
 % Show off our features.
-figure
-imshow(image2);
-hold on
-plot(points.selectStrongest(1000));
-saveas(gcf,'features.png');
+if save_images
+  figure
+  imshow(I);
+  hold on
+  plot(prev_points);
+  saveas(gcf,'features.png');
+end
 
-% Collect track points.
-track_points = [];
+prev_features = extractFeatures(I, prev_points);
+% Create an empty viewSet object to manage the data associated with each view.
+vSet = viewSet;
 
-% Rotation and translation are cumulative, remember.
-cR = eye(3);
-cT = [0,0,0];
-camMatrix2 = cameraMatrix(cameraParams, cR, -cT*cR');
-
+% Add the first view. Place the camera associated with the first view
+% and the origin, oriented along the Z-axis.
+viewId = 1;
+vSet = addView(vSet, viewId, 'Points', prev_points, 'Orientation', eye(3), 'Location', [0 0 0]);
 disp('Begin SFM loop')
 for i=2:numel(image_paths)
-  % Figure out the image's colors.
-  colorimage = imread(image_paths{i});
-  colorimage = colorimage(:,1:1600,:);
-  [H W C] = size(colorimage);
-  pixel_list = reshape(colorimage, H*W, C);
+  disp(sprintf('%d/%d', i, numel(image_paths)))
+  % Load the image.
+  I = undistortImage(rgb2gray(imread(image_paths{i})), cameraParams);
 
-  % Replace image1 with image2, then get a new image2.
-  image1 = image2;
-  features1 = features2;
-  valid_points1 = valid_points2;
-  image2 = rgb2gray(colorimage);
+  % Detect, extract and match features.
+  curr_points = detectSURFFeatures(I, 'NumOctaves', 8, 'ROI', roi);
+  curr_features = extractFeatures(I, curr_points);
+  index_pairs = matchFeatures(prev_features, curr_features, 'MaxRatio', .9, 'Unique',  true);
 
-  % Detect features.
-  points = detectSURFFeatures(image2);
-  [features2,valid_points2] = extractFeatures(image2,points);
-  
-  % Find correspondences.
-  index_pairs = matchFeatures(features1, features2);
-  matchedPoints1 = valid_points1(index_pairs(:,1),:);
-  matchedPoints2 = valid_points2(index_pairs(:,2),:);
+  % Select matched points.
+  matchedPoints1 = prev_points(index_pairs(:, 1));
+  matchedPoints2 = curr_points(index_pairs(:, 2));
 
-  % Estimate the fundamental matrix F.
-  [F, epipolarInliers] = estimateFundamentalMatrix(matchedPoints1,matchedPoints2,'Method','RANSAC','NumTrials',2000);
-
-  % Solve SFM between our two frames.
-  inliers1 = matchedPoints1(epipolarInliers,:);
-  inliers2 = matchedPoints2(epipolarInliers,:);
-  
   if save_images
     figure
-    showMatchedFeatures(image1, image2, inliers1, inliers2);
+    showMatchedFeatures(prevI, I, matchedPoints1, matchedPoints2);
     impath = sprintf('features_%05d.png', i);
     saveas(gcf,impath);
+    prevI = I;
   end
 
-  [R, t] = cameraPose(F, cameraParams, inliers1, inliers2);
+  % Estimate the camera pose of current view relative to the previous view.
+  % The pose is computed up to scale, meaning that the distance between
+  % the cameras in the previous view and the current view is set to 1.
+  % This will be corrected by the bundle adjustment.
+  [relative_orient, relative_loc, inlierIdx] = helperEstimateRelativePose(matchedPoints1, matchedPoints2, cameraParams);
 
-  % Rotations and translations are cumulative (only frame 1 should be at the origin).
-  camMatrix1 = camMatrix2;
-  cR = R * cR;
-  cT = t + cT;
-  camMatrix2 = cameraMatrix(cameraParams, cR', -cT*cR');
+  % Add the current view to the view set.
+  vSet = addView(vSet, i, 'Points', curr_points);
 
-  % Compute the 3-D points.
-  points3D = triangulate(matchedPoints1, matchedPoints2, camMatrix1, camMatrix2);
+  % Store the point matches between the previous and the current views.
+  vSet = addConnection(vSet, i-1, i, 'Matches', index_pairs(inlierIdx,:));
 
-  % Compute the corresponding colors of each 3D points.
-  colorIdx = sub2ind([H,W], round(matchedPoints2.Location(:, 2)), round(matchedPoints2.Location(:, 1)));
-  pointColors = pixel_list(colorIdx, :);
-  pc = pointCloud(points3D, 'Color', pointColors);
-  
-  % Keep just the points which match the track color.
-  point_color_centroids = knnsearch(color_centroids, double(pointColors));
-  track_point_idxs = find(point_color_centroids == track_color_centroid_idx);
-  pc = select(pc, track_point_idxs);
-  if isempty(track_points)
-    track_points = pc;
-  else
-    track_points = pcmerge(track_points, pc, 10);
-  end
+  % Get the table containing the previous camera pose.
+  prev_pose = poses(vSet, i-1);
+  prev_orientation = prev_pose.Orientation{1};
+  prev_location = prev_pose.Location{1};
 
-  % We don't need a million warnings about singular matrices.
-  [a, MSGID] = lastwarn(); warning('off', MSGID)
+  % Compute the current camera pose in the global coordinate system
+  % relative to the first view.
+  orientation = prev_orientation * relative_orient;
+  location = prev_location + relative_loc * prev_orientation;
+  vSet = updateView(vSet, i, 'Orientation', orientation, 'Location', location);
+
+  % Find point tracks across all views.
+  tracks = findTracks(vSet);
+
+  % Get the table containing camera poses for all views.
+  camPoses = poses(vSet);
+
+  % Triangulate initial locations for the 3-D world points.
+  xyzPoints = triangulateMultiview(tracks, camPoses, cameraParams);
+
+  % Refine the 3-D world points and camera poses.
+  [xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(xyzPoints, ...
+      tracks, camPoses, cameraParams, 'FixedViewId', 1, ...
+      'PointsUndistorted', true);
+
+  % Store the refined camera poses.
+  vSet = updateView(vSet, camPoses);
+
+  prev_features = curr_features;
+  prev_points = curr_points;
 end
-end
+
+camPoses = poses(vSet);
+track_points = cell2mat(camPoses.Location);

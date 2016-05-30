@@ -10,11 +10,15 @@ TRACK_COLOR_SUBSET_SIZE = 50;
 % How many images to use when determining track width.
 TRACK_WIDTH_SUBSET_SIZE = 50;
 
-% Maximum distance from plane when fitting track planes.
-PLANE_FIT_THRESHOLD = 20;
-
 % How many example images to display.
-EXAMPLE_IMAGES = 1;
+EXAMPLE_IMAGES = 2;
+
+% How many and which frames to use in our test run of SFM.
+TEST_START = 1;
+TEST_SIZE = 200;
+
+% Write feature images to disk during SFM?
+SAVE_FRAMES = 0;
 
 % Which images to use?
 image_folder = 'N_uV0Q2UH98';
@@ -60,6 +64,7 @@ for i=1:EXAMPLE_IMAGES
   cim = reshape(centroids, H, W);
   cim = (cim==track_color_centroid_idx);
   imwrite(cim, [0 0 0; track_color_centroid / 255], impath);
+  figure;
   imshow(cim, [0 0 0; track_color_centroid / 255]);
 end
 
@@ -71,36 +76,29 @@ track_width_pixels = average_track_width(subset_images, track_color_centroid_idx
 focal_length_inches = (14 * 0.0393701);
 focal_length_pixels = focal_length_inches * (track_width_pixels / 48);
 K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
-cameraParams = cameraParameters('IntrinsicMatrix', K);
+K(3,1) = round(W/2); K(3,2) = round(H/2);
+cameraParams = cameraParameters('IntrinsicMatrix', K,...
+                                'RadialDistortion', [-0.000028 0]);
+for i=1:EXAMPLE_IMAGES
+  rand_num = example_image_nums(i);
+  impath = sprintf('undistorted_%05d.png', rand_num+image_range(1)-1);
+  I = undistortImage(rgb2gray(imread(image_paths{rand_num})), cameraParams);
+  figure;
+  imshow(I);
+  saveas(gcf,impath);
+end
 
 %% Mini SFM, for testing.
-test_image_paths = image_paths(3600:3700);
-track_points = sfm(test_image_paths, track_color_centroid_idx, color_centroids, cameraParams, 1)
+test_image_paths = image_paths(TEST_START:TEST_START+TEST_SIZE);
+track_points = sfm(test_image_paths, track_color_centroid_idx, color_centroids, cameraParams, SAVE_FRAMES);
 disp('Done computation, rendering figures...')
 
 %% Display Figure
 hold off;
 figure;
 axis tight auto;
-pcshow(track_points,'MarkerSize',60);
-saveas(gcf,'test_points.png');
-v = VideoWriter('test_rotate_points.avi');
-open(v);
-for k = 45:135
-  view(k, 45);
-  writeVideo(v,getframe(gcf));
-end
-close(v);
-
-%% Solve full SFM.
-track_points = sfm(image_paths, track_color_centroid_idx, color_centroids, cameraParams, 0)
-disp('Done computation, rendering figures...')
-
-%% Display Figure
-hold off;
-figure;
-axis tight auto;
-pcshow(track_points);
+plot3(track_points(:,1), track_points(:,2), track_points(:,3),...
+      'Color', track_color_centroid/255, 'LineStyle', '-', 'Marker', '+');
 saveas(gcf,'points.png');
 v = VideoWriter('rotate_points.avi');
 open(v);
