@@ -1,5 +1,5 @@
 %% Set up.
-clear all; close all; clc; rng default;
+clear all; close all; clc; rng default; warning('off','all');
 
 % How many images to use when determining colors.
 COLOR_SUBSET_SIZE = 5;
@@ -74,7 +74,7 @@ K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
 cameraParams = cameraParameters('IntrinsicMatrix', K);
 
 %% Mini SFM, for testing.
-test_image_paths = image_paths(3671:3678);
+test_image_paths = image_paths(3600:3700);
 track_points = sfm(test_image_paths, track_color_centroid_idx, color_centroids, cameraParams, 1)
 disp('Done computation, rendering figures...')
 
@@ -94,6 +94,7 @@ close(v);
 
 %% Solve full SFM.
 track_points = sfm(image_paths, track_color_centroid_idx, color_centroids, cameraParams, 0)
+disp('Done computation, rendering figures...')
 
 %% Display Figure
 hold off;
