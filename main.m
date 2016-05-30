@@ -29,25 +29,36 @@ subset_images = random_subset_images(image_paths, COLOR_SUBSET_SIZE);
 color_centroids = cluster_colors(subset_images)
 
 % Output image of centroid-alized pixels.
-im = imread(image_paths{1});
-[H W C] = size(im);
-pixel_list = reshape(im, H*W, C);
-centroids = knnsearch(color_centroids, double(pixel_list));
-cim = reshape(centroids, H, W);
-imwrite(cim, color_centroids / 255, 'centroid_image.png');
+for i=1:10
+  rand_num = randi(numel(image_paths)); 
+  impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1)
+  im = imread(image_paths{rand_num});
+  [H W C] = size(im);
+  pixel_list = reshape(im, H*W, C);
+  centroids = knnsearch(color_centroids, double(pixel_list));
+  cim = reshape(centroids, H, W);
+  imwrite(cim, color_centroids / 255, impath);
+  imshow(cim, color_centroids / 255);
+end
 
 %% Find track color. (should be ~(200,125,70) for the orange track).
 subset_images = random_subset_images(image_paths, TRACK_COLOR_SUBSET_SIZE);
 [track_color_centroid, track_color_centroid_idx] = track_color(subset_images, color_centroids)
 
 % Output image of just track-colored pixels.
-im = imread(image_paths{1});
-[H W C] = size(im);
-cim = zeros(H*W,C);
-idx = find(centroids==track_color_centroid_idx);
-cim(idx,:) = repmat(track_color_centroid, numel(idx), 1);
-cim = round(reshape(cim, H, W, C));
-imwrite(cim, 'just_the_track.png');
+for i=1:10
+  rand_num = randi(numel(image_paths)); 
+  impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1)
+  impath = sprintf('just_the_track_%05d.png', rand_num+image_range(1)-1)
+  im = imread(image_paths{rand_num});
+  [H W C] = size(im);
+  pixel_list = reshape(im, H*W, C);
+  centroids = knnsearch(color_centroids, double(pixel_list));
+  cim = reshape(centroids, H, W);
+  cim = (cim==track_color_centroid_idx);
+  imwrite(cim, [0 0 0; track_color_centroid / 255], impath);
+  imshow(cim, [0 0 0; track_color_centroid / 255]);
+end
 
 %% Find track width (should be either ~870 or ~280 pixels for the orange track).
 subset_images = random_subset_images(image_paths, TRACK_WIDTH_SUBSET_SIZE);
