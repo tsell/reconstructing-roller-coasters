@@ -28,23 +28,41 @@ end
 subset_images = random_subset_images(image_paths, COLOR_SUBSET_SIZE);
 color_centroids = cluster_colors(subset_images)
 
+% Output image of centroid-alized pixels.
+im = imread(image_paths{1});
+[H W C] = size(im);
+pixel_list = reshape(im, H*W, C);
+centroids = knnsearch(color_centroids, double(pixel_list));
+cim = reshape(centroids, H, W);
+imwrite(cim, color_centroids / 255, 'centroid_image.png');
+
 %% Find track color. (should be ~(200,125,70) for the orange track).
 subset_images = random_subset_images(image_paths, TRACK_COLOR_SUBSET_SIZE);
 [track_color_centroid, track_color_centroid_idx] = track_color(subset_images, color_centroids)
+
+% Output image of just track-colored pixels.
+im = imread(image_paths{1});
+[H W C] = size(im);
+cim = zeros(H*W,C);
+idx = find(centroids==track_color_centroid_idx);
+cim(idx,:) = repmat(track_color_centroid, numel(idx), 1);
+cim = round(reshape(cim, H, W, C));
+imwrite(cim, 'just_the_track.png');
 
 %% Find track width (should be either ~870 or ~280 pixels for the orange track).
 subset_images = random_subset_images(image_paths, TRACK_WIDTH_SUBSET_SIZE);
 track_width_pixels = average_track_width(subset_images, track_color_centroid_idx, color_centroids)
 
-%% We're going to use track_width_pixels as scale factor, because we arbitrarily declare the real track width 1
-K = eye(3); K(3,3) = track_width_pixels;
+%% GoPros have a focal length of 14mm, roller coaster tracks are 48 inches wide.
+focal_length_inches = (14 * 0.0393701);
+focal_length_pixels = focal_length_inches * (track_width_pixels / 48);
+K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
 cameraParams = cameraParameters('IntrinsicMatrix', K);
 
 %% Solve SFM.
 
 % TESTING ONLY: use a small set of frames.
 image_range = [91 6119];
-image_range = [91 110]
 image_paths = cell(diff(image_range), 1);
 for i=image_range(1):image_range(2)
   image_paths{i - image_range(1) + 1} = sprintf('%s/%05d.png', image_folder, i);
@@ -104,14 +122,16 @@ for i=2:numel(image_paths)
   % Compute the corresponding colors of each 3D points.
   colorIdx = sub2ind([H,W], round(matchedPoints2.Location(:, 2)), round(matchedPoints2.Location(:, 1)));
   pointColors = pixel_list(colorIdx, :);
+  pc = pointCloud(points3D, 'Color', pointColors);
   
   % Keep just the points which match the track color.
   point_color_centroids = knnsearch(color_centroids, double(pointColors));
   track_point_idxs = find(point_color_centroids == track_color_centroid_idx);
+  pc = select(pc, track_point_idxs);
   if isempty(track_points)
-    track_points = select(pointCloud(points3D, 'Color', pointColors), track_point_idxs);
+    track_points = pc;
   else
-    track_points = pcmerge(track_points, select(pointCloud(points3D, 'Color', pointColors), track_point_idxs), 1);
+    track_points = pcmerge(track_points, pc, 10);
   end
 end
 
