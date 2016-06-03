@@ -2,10 +2,10 @@
 clear all; close all; clc; rng default; warning('off','all');
 
 % How many images to use when determining colors.
-COLOR_SUBSET_SIZE = 30;
+COLOR_SUBSET_SIZE = 50;
 
 % How many images to use when determing track color.
-TRACK_COLOR_SUBSET_SIZE = 30;
+TRACK_COLOR_SUBSET_SIZE = 50;
 
 % How many images to use when determining track width.
 TRACK_WIDTH_SUBSET_SIZE = 50;
@@ -19,8 +19,8 @@ EXAMPLE_IMAGES = 2;
 % calculate the fundamental matrix using those exact frames. So you might get
 % a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
 TEST_START = 91;
-TEST_SIZE = 8;
-TEST_FRAMESKIP = 5;
+TEST_SIZE = 100;
+TEST_FRAMESKIP = 10;
 
 % Write feature images to disk during SFM?
 SAVE_FRAMES = 0;
@@ -38,6 +38,7 @@ end
 %% Pick colors.
 % Use k-means to determine the centroids of our colors.
 subset_images = random_subset_images(image_paths, COLOR_SUBSET_SIZE);
+disp('Clustering colors...');
 color_centroids = cluster_colors(subset_images)
 
 % Output image of centroid-alized pixels.
@@ -56,6 +57,7 @@ end
 
 %% Find track color. (should be ~(200,125,70) for the orange track).
 subset_images = random_subset_images(image_paths, TRACK_COLOR_SUBSET_SIZE);
+disp('Finding track color...')
 [track_color_centroid, track_color_centroid_idx] = track_color(subset_images, color_centroids)
 
 % Output image of just track-colored pixels.
@@ -75,6 +77,7 @@ end
 
 %% Find track width (should be ~500-1000 pixels for the orange track, not very precise).
 subset_images = random_subset_images(image_paths, TRACK_WIDTH_SUBSET_SIZE);
+disp('Finding track width...');
 track_width_pixels = average_track_width(subset_images, track_color_centroid_idx, color_centroids)
 
 %% GoPros have a focal length of 14mm, roller coaster tracks are 48 inches wide.
@@ -93,8 +96,9 @@ for i=1:EXAMPLE_IMAGES
   saveas(gcf,impath);
 end
 
-%% Mini SFM, for testing.
-[camera_points, track_points] = sfm(...
+%% Do SFM, get the camera poses.
+disp('SFM...');
+camera_points = sfm(...
     image_paths, track_color_centroid_idx, color_centroids, cameraParams, SAVE_FRAMES,...
     TEST_START, TEST_SIZE,  TEST_FRAMESKIP);
 disp('Done computation, rendering figures...')
@@ -114,6 +118,4 @@ for k = 45:135
 end
 close(v);
 
-hold on;
-pcshow(track_points, 'MarkerSize', 6);
-saveas(gcf,'track_points.png');
+disp('Done!');

@@ -1,4 +1,4 @@
-function [ camera_points, track_points ] = sfm( image_paths, track_color_centroid_idx, color_centroids, cameraParams, ...
+function [ camera_points ] = sfm( image_paths, track_color_centroid_idx, color_centroids, cameraParams, ...
                                                 save_images, firstframe, framecount, frameskip)
 
 % Most of this is from http://www.mathworks.com/help/vision/examples/structure-from-motion-from-multiple-views.html
@@ -121,70 +121,5 @@ for i=1:framecount
   prev_points = curr_points;
 end
 
-%% Compute dense reconstruction of the track, using our now-known camera poses.
-disp('Second SFM step.');
-
-% Initialize with first image in grayscale and undistorted.
-disp('Undistorting first image...');
-I = undistortImage(rgb2gray(imread(image_paths{actual_frames_used(1)})), cameraParams);
-
-% Detect corners.
-disp('Detecting corners...');
-prev_points = detectMinEigenFeatures(I, 'MinQuality', 0.001);
-
-% Point tracker keeps track of points.
-disp('Initializing tracker...');
-tracker = vision.PointTracker('MaxBidirectionalError', 1, 'NumPyramidLevels', 6);
-prev_points = prev_points.Location;
-initialize(tracker, prev_points, I);
-
-% Store the dense points in the view set.
-viewset = updateConnection(viewset, 1, 2, 'Matches', zeros(0, 2));
-viewset = updateView(viewset, 1, 'Points', prev_points);
-
-% Track the points across all views.
-disp(sprintf('SFM loop (%d frames total)', framecount-1));
-for i=2:framecount
-    frameno = actual_frames_used(i);
-    disp(sprintf('Calculating points on frame %d', frameno));
-
-    % Read and undistort the current image.
-    I = undistortImage(rgb2gray(imread(image_paths{frameno})), cameraParams);
-
-    % Track the points.
-    [curr_points, valid_idx] = step(tracker, I);
-
-    % Clear the old matches between the points.
-    if i < framecount
-        viewset = updateConnection(viewset, i, i+1, 'Matches', zeros(0, 2));
-    end
-    viewset = updateView(viewset, i, 'Points', curr_points);
-
-    % Store the point matches in the view set.
-    matches = repmat((1:size(prev_points, 1))', [1, 2]);
-    matches = matches(valid_idx, :);
-    viewset = updateConnection(viewset, i-1, i, 'Matches', matches);
-end
-
-% Find point tracks across all views.
-disp('Finding tracks...');
-tracks = findTracks(viewset);
-
-% Find camera poses across all views.
-disp('Finding poses...');
-camera_poses = poses(viewset);
-
-% Triangulate initial locations for the 3-D world points.
-disp('Triangulating points...');
-xyz_points = triangulateMultiview(tracks, camera_poses,...
-    cameraParams);
-
-% Refine the 3-D world points and camera poses.
-disp('Final bundleAdjustment...');
-[track_points, camera_poses, reprojection_errors] = bundleAdjustment(...
-    xyz_points, tracks, camera_poses, cameraParams, 'FixedViewId', 1, ...
-    'PointsUndistorted', true);
-
-disp('Done!');
-track_points = track_points(reprojectionErrors < 5, :);
+disp('Done!')
 camera_points = cell2mat(camera_poses.Location);
