@@ -35,7 +35,7 @@ viewset = viewSet;
 % and the origin, oriented along the Z-axis.
 viewId = 1;
 viewset = addView(viewset, viewId, 'Points', prev_points, 'Orientation', eye(3), 'Location', [0 0 0]);
-disp(sprint('Begin SFM loop (%d frames total)', framecount));
+disp(sprintf('Begin SFM loop (%d frames total)', framecount));
 for i=1:framecount
   frameshift = 0;
   orig_frameno = firstframe + i * frameskip;
@@ -146,7 +146,8 @@ viewset = updateView(viewset, 1, 'Points', prev_points);
 disp(sprintf('SFM loop (%d frames total)', framecount-1));
 for i=2:framecount
     frameno = actual_frames_used(i);
-    disp(sprintf('Calculating points on 
+    disp(sprintf('Calculating points on frame %d', frameno));
+
     % Read and undistort the current image.
     I = undistortImage(rgb2gray(imread(image_paths{frameno})), cameraParams);
 
@@ -185,5 +186,5 @@ disp('Final bundleAdjustment...');
     'PointsUndistorted', true);
 
 disp('Done!');
-track_points = track_points(reprojectionErrors < 5, :)
+track_points = track_points(reprojectionErrors < 5, :);
 camera_points = cell2mat(camera_poses.Location);
