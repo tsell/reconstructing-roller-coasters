@@ -2,10 +2,10 @@
 clear all; close all; clc; rng default; warning('off','all');
 
 % How many images to use when determining colors.
-COLOR_SUBSET_SIZE = 5;
+COLOR_SUBSET_SIZE = 30;
 
 % How many images to use when determing track color.
-TRACK_COLOR_SUBSET_SIZE = 50;
+TRACK_COLOR_SUBSET_SIZE = 30;
 
 % How many images to use when determining track width.
 TRACK_WIDTH_SUBSET_SIZE = 50;
@@ -14,15 +14,20 @@ TRACK_WIDTH_SUBSET_SIZE = 50;
 EXAMPLE_IMAGES = 2;
 
 % How many and which frames to use in our test run of SFM.
-TEST_START = 1;
-TEST_SIZE = 200;
+% For example, start=91, size=3, frameskip=5 will use frames [91, 96, 101].
+% Our SFM algorithm will also try the frames in between if it's unable to
+% calculate the fundamental matrix using those exact frames. So you might get
+% a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
+TEST_START = 91;
+TEST_SIZE = 8;
+TEST_FRAMESKIP = 5;
 
 % Write feature images to disk during SFM?
 SAVE_FRAMES = 0;
 
 % Which images to use?
 image_folder = 'N_uV0Q2UH98';
-image_range = [91 6119];
+image_range = [91 5962];
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
@@ -89,22 +94,26 @@ for i=1:EXAMPLE_IMAGES
 end
 
 %% Mini SFM, for testing.
-test_image_paths = image_paths(TEST_START:TEST_START+TEST_SIZE);
-track_points = sfm(test_image_paths, track_color_centroid_idx, color_centroids, cameraParams, SAVE_FRAMES);
+[camera_points, track_points] = sfm(...
+    image_paths, track_color_centroid_idx, color_centroids, cameraParams, SAVE_FRAMES,...
+    TEST_START, TEST_SIZE,  TEST_FRAMESKIP);
 disp('Done computation, rendering figures...')
 
 %% Display Figure
 hold off;
 figure;
 axis tight auto;
-plot3(track_points(:,1), track_points(:,2), track_points(:,3),...
+plot3(camera_points(:,1), camera_points(:,2), camera_points(:,3),...
       'Color', track_color_centroid/255, 'LineStyle', '-', 'Marker', '+');
-saveas(gcf,'points.png');
-v = VideoWriter('rotate_points.avi');
+saveas(gcf,'camera_points.png');
+v = VideoWriter('rotate_camera_points.avi');
 open(v);
 for k = 45:135
   view(k, 45);
   writeVideo(v,getframe(gcf));
 end
 close(v);
-exit;
+
+hold on;
+pcshow(track_points, 'MarkerSize', 6);
+saveas(gcf,'track_points.png');
