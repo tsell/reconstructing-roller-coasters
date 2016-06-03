@@ -78,8 +78,11 @@ for i=1:framecount
 
     frameshift = frameshift + 1;
     if frameshift == frameskip
-      error('Used all %d inbetween frames, unable to compute fundamental matrix after frame %d',...
+      warning('Used all %d inbetween frames, unable to compute fundamental matrix after frame %d',...
             frameskip, orig_frameno);
+      disp('Done!')
+      camera_points = cell2mat(camera_poses.Location);
+      return
     end
   end
 
