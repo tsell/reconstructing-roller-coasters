@@ -52,6 +52,8 @@ for i=1:framecount
     if frameno > numel(image_paths)
       warning('Went past the last frame!');
       disp('Done!');
+      disp(sprintf('Average skips per frame is %d/%d = %d', skipped_frame_sum, framecount, skipped_frame_sum/framecount));
+      disp(sprintf('Max skips per frame is %d', skipped_frame_max));
       camera_points = cell2mat(camera_poses.Location);
       return
     end
@@ -102,6 +104,8 @@ for i=1:framecount
       warning('Used all %d inbetween frames, unable to compute fundamental matrix after frame %d',...
             frameskip, orig_frameno);
       disp('Done!')
+      disp(sprintf('Average skips per frame is %d/%d = %d', skipped_frame_sum, framecount, skipped_frame_sum/framecount));
+      disp(sprintf('Max skips per frame is %d', skipped_frame_max));
       camera_points = cell2mat(camera_poses.Location);
       return
     end

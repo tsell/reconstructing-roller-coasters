@@ -1,5 +1,5 @@
 %% Set up.
-clear all; close all; clc; rng default; warning('off','all');
+clear all; close all; clc; rng default;
 
 % Write feature images to disk during SFM?
 SAVE_FRAMES = 0;
