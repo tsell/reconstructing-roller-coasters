@@ -1,6 +1,6 @@
 function [ width ] = average_track_width( images, track_color_centroid_idx, color_centroids )
 % How wide of a strip (in pixels) at the bottom to use for track-width determination.
-BOTTOM_STRIP_WIDTH = 5;
+BOTTOM_STRIP_WIDTH = 10;
 
 width = 0;
 

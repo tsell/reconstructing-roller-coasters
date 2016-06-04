@@ -4,6 +4,11 @@ function [ camera_points ] = sfm( image_paths, track_color_centroid_idx, color_c
 % Most of this is from http://www.mathworks.com/help/vision/examples/structure-from-motion-from-multiple-views.html
 
 actual_frames_used = zeros(framecount, 1);
+skipped_frame_sum = 0;
+
+NUM_OCTAVES = 4
+NUM_SCALE_LEVELS = 3
+METRIC_THRESHOLD = 900.0
 
 %% SFM Step One
 % Find the camera poses for each frame.
@@ -16,7 +21,9 @@ prevI = I;
 border = 100;
 roi = [border, border,...
        size(I, 2) - 2*border, size(I, 1) - 2*border];
-prev_points = detectSURFFeatures(I, 'NumOctaves', 8, 'ROI', roi);
+prev_points = detectSURFFeatures(I, 'NumOctaves', NUM_OCTAVES, 'ROI', roi,...
+                                 'NumScaleLevels', NUM_SCALE_LEVELS,...
+                                 'MetricThreshold', METRIC_THRESHOLD);
 
 % Show off our features.
 if save_images
@@ -47,7 +54,9 @@ for i=1:framecount
     I = undistortImage(rgb2gray(imread(image_paths{frameno})), cameraParams);
 
     % Detect, extract and match features.
-    curr_points = detectSURFFeatures(I, 'NumOctaves', 8, 'ROI', roi);
+    curr_points = detectSURFFeatures(I, 'NumOctaves', NUM_OCTAVES, 'ROI', roi,...
+                                     'NumScaleLevels', NUM_SCALE_LEVELS,...
+                                     'MetricThreshold', METRIC_THRESHOLD);
     curr_features = extractFeatures(I, curr_points);
     index_pairs = matchFeatures(prev_features, curr_features, 'MaxRatio', .8, 'Unique',  true);
 
@@ -77,6 +86,7 @@ for i=1:framecount
     end
 
     frameshift = frameshift + 1;
+    skipped_frame_sum = skipped_frame_sum + 1;
     if frameshift == frameskip
       warning('Used all %d inbetween frames, unable to compute fundamental matrix after frame %d',...
             frameskip, orig_frameno);
@@ -125,4 +135,7 @@ for i=1:framecount
 end
 
 disp('Done!')
+disp(sprintf('Average skips per frame is %d/%d = %d', skipped_frame_sum, framecount, skipped_frame_sum/framecount));
+
 camera_points = cell2mat(camera_poses.Location);
+
