@@ -26,7 +26,7 @@ EXAMPLE_IMAGES = 2;
 % calculate the fundamental matrix using those exact frames. So you might get
 % a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
 TEST_START = 1
-TEST_SIZE = 100
+TEST_SIZE = 1000
 TEST_FRAMESKIP = 20
 
 % Get list of image paths.
