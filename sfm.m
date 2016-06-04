@@ -79,7 +79,6 @@ for i=1:framecount
       showMatchedFeatures(prevI, I, matchedPoints1, matchedPoints2);
       impath = sprintf('features_%05d.png', frameno);
       saveas(gcf,impath);
-      prevI = I;
     end
 
     % Estimate the camera pose of current view relative to the previous view.
@@ -89,6 +88,9 @@ for i=1:framecount
     try
       [relative_orient, relative_loc, inlierIdx] = helperEstimateRelativePose(matchedPoints1, matchedPoints2, cameraParams);
       disp('Success!')
+      if save_images
+        prevI = I;
+      end
       actual_frames_used(i) = frameno;
       break
     catch ME

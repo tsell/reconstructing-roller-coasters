@@ -1,7 +1,7 @@
 %% Set up.
 clear all; close all; clc; rng default;
 
-% Write feature images to disk during SFM?
+% Write feature correspondence images to disk during SFM?
 SAVE_FRAMES = 0;
 
 % Which images to use?
@@ -27,7 +27,7 @@ EXAMPLE_IMAGES = 2;
 % a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
 TEST_START = 1
 TEST_SIZE = 100
-TEST_FRAMESKIP = 20
+TEST_FRAMESKIP = 10
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
