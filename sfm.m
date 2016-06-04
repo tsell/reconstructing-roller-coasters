@@ -48,6 +48,13 @@ for i=1:framecount
   orig_frameno = firstframe + i * frameskip;
   while frameshift < frameskip
     frameno = orig_frameno + frameshift;
+    if frameno > numel(image_paths)
+      warning('Went past the last frame!');
+      disp('Done!');
+      camera_points = cell2mat(camera_poses.Location);
+      return
+    end
+
     disp(sprintf('Calculating with frame %d (%d+%d)', frameno, orig_frameno, frameshift));
 
     % Load the image.
