@@ -5,6 +5,7 @@ function [ camera_points ] = sfm( image_paths, track_color_centroid_idx, color_c
 
 actual_frames_used = zeros(framecount, 1);
 skipped_frame_sum = 0;
+skipped_frame_max = 0;
 
 NUM_OCTAVES = 4
 NUM_SCALE_LEVELS = 3
@@ -93,6 +94,9 @@ for i=1:framecount
     end
 
     frameshift = frameshift + 1;
+    if frameshift > skipped_frame_max
+      skipped_frame_max = frameshift;
+    end
     skipped_frame_sum = skipped_frame_sum + 1;
     if frameshift == frameskip
       warning('Used all %d inbetween frames, unable to compute fundamental matrix after frame %d',...
@@ -143,6 +147,7 @@ end
 
 disp('Done!')
 disp(sprintf('Average skips per frame is %d/%d = %d', skipped_frame_sum, framecount, skipped_frame_sum/framecount));
+disp(sprintf('Max skips per frame is %d', skipped_frame_max));
 
 camera_points = cell2mat(camera_poses.Location);
 
