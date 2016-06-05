@@ -23,7 +23,7 @@ TRACK_COLOR_SUBSET_SIZE = 50
 TRACK_WIDTH_SUBSET_SIZE = 50
 
 % How many example images to display.
-EXAMPLE_IMAGES = 2;
+EXAMPLE_IMAGES = 0;
 
 % How many and which frames to use in our test run of SFM.
 % For example, start=91, size=3, frameskip=5 will use frames [91, 96, 101].
@@ -47,17 +47,19 @@ disp('Clustering colors...');
 color_centroids = cluster_colors(subset_images)
 
 % Output image of centroid-alized pixels.
-example_image_nums = randi(numel(image_paths), 1, EXAMPLE_IMAGES);
-for i=1:EXAMPLE_IMAGES
-  rand_num = example_image_nums(i);
-  impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1);
-  im = imread(image_paths{rand_num});
-  [H W C] = size(im);
-  pixel_list = reshape(im, H*W, C);
-  centroids = knnsearch(color_centroids, double(pixel_list));
-  cim = reshape(centroids, H, W);
-  imwrite(cim, color_centroids / 255, impath);
-  imshow(cim, color_centroids / 255);
+if EXAMPLE_IMAGES
+  example_image_nums = randi(numel(image_paths), 1, EXAMPLE_IMAGES);
+  for i=1:EXAMPLE_IMAGES
+    rand_num = example_image_nums(i);
+    impath = sprintf('centroid_image_%05d.png', rand_num+image_range(1)-1);
+    im = imread(image_paths{rand_num});
+    [H W C] = size(im);
+    pixel_list = reshape(im, H*W, C);
+    centroids = knnsearch(color_centroids, double(pixel_list));
+    cim = reshape(centroids, H, W);
+    imwrite(cim, color_centroids / 255, impath);
+    imshow(cim, color_centroids / 255);
+  end
 end
 
 %% Find track color. (should be ~(200,125,70) for the orange track).
@@ -66,18 +68,20 @@ disp('Finding track color...')
 [track_color_centroid, track_color_centroid_idx] = track_color(subset_images, color_centroids)
 
 % Output image of just track-colored pixels.
-for i=1:EXAMPLE_IMAGES
-  rand_num = example_image_nums(i);
-  impath = sprintf('just_the_track_%05d.png', rand_num+image_range(1)-1);
-  im = imread(image_paths{rand_num});
-  [H W C] = size(im);
-  pixel_list = reshape(im, H*W, C);
-  centroids = knnsearch(color_centroids, double(pixel_list));
-  cim = reshape(centroids, H, W);
-  cim = (cim==track_color_centroid_idx);
-  imwrite(cim, [0 0 0; track_color_centroid / 255], impath);
-  figure;
-  imshow(cim, [0 0 0; track_color_centroid / 255]);
+if EXAMPLE_IMAGES
+  for i=1:EXAMPLE_IMAGES
+    rand_num = example_image_nums(i);
+    impath = sprintf('just_the_track_%05d.png', rand_num+image_range(1)-1);
+    im = imread(image_paths{rand_num});
+    [H W C] = size(im);
+    pixel_list = reshape(im, H*W, C);
+    centroids = knnsearch(color_centroids, double(pixel_list));
+    cim = reshape(centroids, H, W);
+    cim = (cim==track_color_centroid_idx);
+    imwrite(cim, [0 0 0; track_color_centroid / 255], impath);
+    figure;
+    imshow(cim, [0 0 0; track_color_centroid / 255]);
+  end
 end
 
 %% Find track width (should be ~500-1000 pixels for the orange track, not very precise).
@@ -92,13 +96,15 @@ K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
 K(3,1) = round(W/2); K(3,2) = round(H/2);
 cameraParams = cameraParameters('IntrinsicMatrix', K,...
                                 'RadialDistortion', [-0.000028 0]);
-for i=1:EXAMPLE_IMAGES
-  rand_num = example_image_nums(i);
-  impath = sprintf('undistorted_%05d.png', rand_num+image_range(1)-1);
-  I = undistortImage(rgb2gray(imread(image_paths{rand_num})), cameraParams);
-  figure;
-  imshow(I);
-  saveas(gcf,impath);
+if EXAMPLE_IMAGES
+  for i=1:EXAMPLE_IMAGES
+    rand_num = example_image_nums(i);
+    impath = sprintf('undistorted_%05d.png', rand_num+image_range(1)-1);
+    I = undistortImage(rgb2gray(imread(image_paths{rand_num})), cameraParams);
+    figure;
+    imshow(I);
+    saveas(gcf,impath);
+  end
 end
 
 %% Do SFM, get the camera poses.
