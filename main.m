@@ -31,7 +31,7 @@ EXAMPLE_IMAGES = 0;
 % calculate the fundamental matrix using those exact frames. So you might get
 % a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
 TEST_START = 1
-TEST_SIZE = 100
+TEST_SIZE = 1000
 TEST_FRAMESKIP = 4
 
 % Get list of image paths.
@@ -121,8 +121,8 @@ figure;
 axis tight auto;
 plot3(camera_points(:,1), camera_points(:,2), camera_points(:,3),...
       'Color', track_color_centroid/255, 'LineStyle', '-', 'Marker', '+');
-saveas(gcf,'camera_points.png');
-v = VideoWriter('rotate_camera_points.avi');
+saveas(gcf,sprintf('camera_points_%d.png', TEST_FRAMESKIP));
+v = VideoWriter(sprintf('rotate_camera_points_%d.avi', TEST_FRAMESKIP));
 open(v);
 for k = 45:135
   view(k, 45);
