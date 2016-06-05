@@ -32,7 +32,7 @@ EXAMPLE_IMAGES = 0;
 % a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
 TEST_START = 1
 TEST_SIZE = 100
-TEST_FRAMESKIP = 2
+TEST_FRAMESKIP = 4
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
@@ -92,6 +92,7 @@ track_width_pixels = average_track_width(subset_images, track_color_centroid_idx
 %% GoPros have a focal length of 14mm, roller coaster tracks are 48 inches wide.
 focal_length_inches = (14 * 0.0393701);
 focal_length_pixels = focal_length_inches * (track_width_pixels / 48);
+[H W C] = size(imread(image_paths{1}));
 K = eye(3); K(1,1) = focal_length_pixels; K(2,2) = focal_length_pixels;
 K(3,1) = round(W/2); K(3,2) = round(H/2);
 cameraParams = cameraParameters('IntrinsicMatrix', K,...
