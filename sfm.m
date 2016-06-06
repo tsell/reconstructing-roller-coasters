@@ -7,9 +7,9 @@ actual_frames_used = zeros(framecount, 1);
 skipped_frame_sum = 0;
 skipped_frame_max = 0;
 
-NUM_OCTAVES = 4
+NUM_OCTAVES = 5
 NUM_SCALE_LEVELS = 3
-METRIC_THRESHOLD = 900.0
+METRIC_THRESHOLD = 2000.0
 
 %% SFM Step One
 % Find the camera poses for each frame.

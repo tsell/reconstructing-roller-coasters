@@ -14,10 +14,10 @@ image_folder = 'N_uV0Q2UH98'
 image_range = [91 5962]
 
 % How many images to use when determining colors.
-COLOR_SUBSET_SIZE = 50
+COLOR_SUBSET_SIZE = 5
 
 % How many images to use when determing track color.
-TRACK_COLOR_SUBSET_SIZE = 50
+TRACK_COLOR_SUBSET_SIZE = 30
 
 % How many images to use when determining track width.
 TRACK_WIDTH_SUBSET_SIZE = 50
@@ -31,8 +31,9 @@ EXAMPLE_IMAGES = 0;
 % calculate the fundamental matrix using those exact frames. So you might get
 % a reconstruction with frames [91, 96, 103] or [91, 99, 101] instead.
 TEST_START = 1
-TEST_SIZE = 1000
-TEST_FRAMESKIP = 4
+TEST_SIZE = 10000
+TEST_FRAMESKIP = 16
+EXPERIMENT_NO = 22
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
@@ -121,8 +122,8 @@ figure;
 axis tight auto;
 plot3(camera_points(:,1), camera_points(:,2), camera_points(:,3),...
       'Color', track_color_centroid/255, 'LineStyle', '-', 'Marker', '+');
-saveas(gcf,sprintf('camera_points_%d.png', TEST_FRAMESKIP));
-v = VideoWriter(sprintf('rotate_camera_points_%d.avi', TEST_FRAMESKIP));
+saveas(gcf,sprintf('camera_points_%d.png', EXPERIMENT_NO));
+v = VideoWriter(sprintf('rotate_camera_points_%d.avi', EXPERIMENT_NO));
 open(v);
 for k = 45:135
   view(k, 45);
