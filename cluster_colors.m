@@ -7,7 +7,7 @@ function [ color_centroids ] = cluster_colors( images )
 %     color_centroids = a NUM_COLORS x 3 matrix of RGB values.
 
 % How many colors to distinguish (we want the track to be all one color).
-NUM_COLORS = 10
+NUM_COLORS = 8
 % How many pixels to sample per image.
 SUBSET_SIZE = 100 * NUM_COLORS;
 
