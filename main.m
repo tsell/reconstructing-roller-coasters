@@ -33,7 +33,7 @@ EXAMPLE_IMAGES = 0;
 TEST_START = 1
 TEST_SIZE = 10000
 TEST_FRAMESKIP = 16
-EXPERIMENT_NO = 22
+EXPERIMENT_NO = 25
 
 % Get list of image paths.
 image_paths = cell(diff(image_range), 1);
